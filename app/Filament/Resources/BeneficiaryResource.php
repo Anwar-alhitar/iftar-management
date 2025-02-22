@@ -12,7 +12,10 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\DateFilter;
+use Filament\Tables\Actions;
 class BeneficiaryResource extends Resource
 {
     protected static ?string $model = Beneficiary::class;
@@ -34,15 +37,13 @@ class BeneficiaryResource extends Resource
                 ->default(auth()->user()->gender)
                // ->disabled(auth()->user()->role === 'employee' || auth()->user()->role==="admin")
                 ->required(),
-            Forms\Components\TextInput::make('serial_number')
-                //->disabled()
-                ->readOnly()
-                ->value(static::creating(function ($beneficiary) {
-                    $maxSerial = Beneficiary::where('gender', $beneficiary->gender)
-                        ->max('serial_number');
-        
-                    $beneficiary->serial_number = ($maxSerial ?? 0) + 1;
-                }) )
+                Forms\Components\TextInput::make('serial_number')
+                ->disabled()
+                ->label('الرقم التسلسلي')
+                ->visibleOn('view')
+                ->formatStateUsing(function ($record) {
+                    return $record->gender . '-' . str_pad($record->serial_number, 5, '0', STR_PAD_LEFT);
+                })
                 ->visibleOn('view'),
             ]);
     }
@@ -50,20 +51,58 @@ class BeneficiaryResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->columns([
-                //
-            ])
-            ->filters([
-                //
-            ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+        ->columns([
+            TextColumn::make('serial_number')
+                ->label('الرقم التسلسلي')
+                ->formatStateUsing(fn ($state, $record) => 
+                    $record->gender === 'male' ? 'M-' : 'F-' . str_pad($state, 5, '0', STR_PAD_LEFT)
+                )
+                ->sortable()
+                ->searchable(),
+                
+            TextColumn::make('full_name')
+                ->label('الاسم الكامل')
+                ->searchable()
+                ->sortable(),
+                
+            TextColumn::make('id_number')
+                ->label('رقم الهوية')
+                ->searchable(),
+                
+            TextColumn::make('gender')
+                ->label('الجنس')
+                ->formatStateUsing(fn ($state) => $state === 'male' ? 'ذكر' : 'أنثى')
+                ->badge()
+                ->color(fn ($state) => $state === 'male' ? 'primary' : 'success'),
+                
+            TextColumn::make('meal_distributions_count')
+                ->label('إجمالي الوجبات')
+                ->counts('meal_distributions')
+                ->sortable(),
+                
+            TextColumn::make('created_at')
+                ->label('تاريخ التسجيل')
+                ->dateTime('d/m/Y')
+                ->sortable()
+        ])
+        ->filters([
+            SelectFilter::make('gender')
+                ->label('تصفية حسب الجنس')
+                ->options([
+                    'male' => 'ذكر',
+                    'female' => 'أنثى'
                 ]),
-            ]);
+                
+                Filament\Tables\Filters\DateFilter::make('created_at')
+                ->label('تاريخ التسجيل')
+        ])
+        ->actions([
+            Filament\Tables\Actions\ViewAction::make()->icon('heroicon-s-eye'),
+            Filament\Tables\Actions\EditAction::make()->icon('heroicon-s-pencil'),
+        ])
+        ->bulkActions([
+            Filament\Tables\Actions\DeleteBulkAction::make()->icon('heroicon-s-trash'),
+        ]);
     }
 
     public static function getRelations(): array
