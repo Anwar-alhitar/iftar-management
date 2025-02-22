@@ -13,6 +13,9 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Validation\Rule;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
+
 class MealDistributionResource extends Resource
 {
     protected static ?string $model = MealDistribution::class;
@@ -42,20 +45,47 @@ class MealDistributionResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->columns([
-                //
-            ])
-            ->filters([
-                //
-            ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ]);
+        ->columns([
+            TextColumn::make('beneficiary.serial_number')
+                ->label('الرقم التسلسلي')
+                ->formatStateUsing(fn ($state, $record) => 
+                    $record->beneficiary->gender === 'male' ? 'M-' : 'F-' . str_pad($state, 5, '0', STR_PAD_LEFT)
+                )
+                ->sortable(),
+                
+            TextColumn::make('beneficiary.full_name')
+                ->label('اسم المستفيد')
+                ->searchable()
+                ->sortable(),
+                
+            TextColumn::make('user.name')
+                ->label('الموظف المسؤول')
+                ->searchable()
+                ->sortable(),
+                
+            TextColumn::make('distributed_at')
+                ->label('تاريخ التوزيع')
+                ->dateTime('d/m/Y H:i')
+                ->sortable(),
+                
+            TextColumn::make('created_at')
+                ->label('وقت التسجيل')
+                ->since()
+                ->sortable()
+        ])
+        ->filters([
+            SelectFilter::make('user')
+                ->label('الموظف')
+                ->relationship('user', 'name'),
+                
+                Filament\Tables\Filters\DateFilter::make('distributed_at')
+                ->label('تاريخ التوزيع')
+        ])
+        ->actions([
+            Filament\Tables\Actions\EditAction::make()->icon('heroicon-s-pencil'),
+            Filament\Tables\Actions\DeleteAction::make()->icon('heroicon-s-trash'),
+        ])
+        ->defaultSort('distributed_at', 'desc');
     }
 
     public static function getRelations(): array
