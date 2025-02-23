@@ -9,6 +9,9 @@ use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Actions\DeleteAction;
+use Filament\Tables\Actions\DeleteBulkAction;
+use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -53,23 +56,23 @@ class UserResource extends Resource
                 ->label('الاسم')
                 ->searchable()
                 ->sortable(),
-                
+
             TextColumn::make('email')
                 ->label('البريد الإلكتروني')
                 ->searchable(),
-                
+
             TextColumn::make('role')
                 ->label('الدور')
                 ->formatStateUsing(fn ($state) => $state === 'admin' ? 'مدير' : 'موظف')
                 ->badge()
                 ->color(fn ($state) => $state === 'admin' ? 'danger' : 'primary'),
-                
+
             TextColumn::make('gender')
                 ->label('الجنس المسؤول')
                 ->formatStateUsing(fn ($state) => $state === 'male' ? 'ذكر' : 'أنثى')
                 ->badge()
                 ->color(fn ($state) => $state === 'male' ? 'primary' : 'success'),
-                
+
             TextColumn::make('created_at')
                 ->label('تاريخ التسجيل')
                 ->dateTime('d/m/Y')
@@ -82,7 +85,7 @@ class UserResource extends Resource
                     'admin' => 'مدير',
                     'employee' => 'موظف'
                 ]),
-                
+
             SelectFilter::make('gender')
                 ->label('الجنس')
                 ->options([
@@ -91,11 +94,11 @@ class UserResource extends Resource
                 ])
         ])
         ->actions([
-            Filament\Tables\Actions\EditAction::make()->icon('heroicon-s-pencil'),
-            Filament\Tables\Actions\DeleteAction::make()->icon('heroicon-s-trash'),
+            EditAction::make()->icon('heroicon-s-pencil'),
+            DeleteAction::make()->icon('heroicon-s-trash'),
         ])
         ->bulkActions([
-            Filament\Tables\Actions\DeleteBulkAction::make()->icon('heroicon-s-trash'),
+            DeleteBulkAction::make()->icon('heroicon-s-trash'),
         ]);
     }
 
