@@ -23,4 +23,18 @@ class MealDistribution extends Model
     {
         return $this->hasMany(MealDistribution::class);
     }
+
+    public function beneficiary()
+    {
+        return $this->belongsTo(Beneficiary::class);
+    }
+
+    protected $guarded = [];
+
+
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }
