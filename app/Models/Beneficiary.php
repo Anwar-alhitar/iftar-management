@@ -12,7 +12,7 @@ class Beneficiary extends Model
     protected $fillable = [
         'full_name',
         'id_number',
-      
+
         'gender'
     ];
 
@@ -22,16 +22,20 @@ class Beneficiary extends Model
             $beneficiary->serial_number = Beneficiary::where('gender', $beneficiary->gender)
                 ->max('serial_number') + 1;
         });
-    
+
         static::saving(function ($beneficiary) {
             $exists = Beneficiary::where('gender', $beneficiary->gender)
                 ->where('serial_number', $beneficiary->serial_number)
                 ->exists();
-                
+
             if ($exists) {
                 throw new \Exception('الرقم التسلسلي موجود مسبقًا لهذا النوع');
             }
         });
+    }
+    public function mealDistributions()
+    {
+        return $this->hasMany(MealDistribution::class);
     }
 
 }
