@@ -16,11 +16,18 @@ use Illuminate\Validation\Rule;
 use App\Filament\Resources\MealDistributionResource\Pages;
 use Illuminate\Support\Facades\Log;
 use Filament\Notifications\Notification;
+
 class MealDistributionResource extends Resource
 {
     protected static ?string $model = MealDistribution::class;
     protected static ?string $navigationIcon = 'heroicon-o-truck';
     protected static ?string $navigationLabel = 'توزيع الوجبات';
+    protected static ?string $pluralModelLabel = ' الوجبات الموزعة';
+    protected static ?string $modelLabel = 'صرف وجبة';
+    public static function getNavigationBadge(): ?string
+    {
+        return static::getEloquentQuery()->count();
+    }
 
     public static function form(Form $form): Form
     {
@@ -34,7 +41,7 @@ class MealDistributionResource extends Resource
             ])
             ->required()
             ->reactive(),
-        
+
         Forms\Components\TextInput::make('serial_number')
             ->label('الرقم التسلسلي')
             ->numeric()
@@ -42,29 +49,34 @@ class MealDistributionResource extends Resource
             ->afterStateUpdated(function ($state, callable $set, callable $get) {
                 $gender = $get('gender'); // الحصول على الجنس المحدد
                 if (!$gender || !$state) return;
-        
+
                 $beneficiary = Beneficiary::where('gender', $gender)
                     ->where('serial_number', $state)
                     ->first();
-        
+
                 if ($beneficiary) {
                     if (self::checkMealStatus($beneficiary->id)) {
                         Notification::make()
                             ->title('⚠️ تنبيه: هذا المستفيد قد استلم وجبة اليوم!')
                             ->success()
                             ->send();
-        
+
                         $set('beneficiary_id', null);
                         $set('beneficiary_name', null);
                         $set('serial_number', null);
                         return;
                     }
-        
+
                     $set('beneficiary_id', $beneficiary->id);
                     $set('beneficiary_name', $beneficiary->full_name);
                 } else {
+                    Notification::make()
+                            ->title('⚠️ غير موجود')
+                            ->success()
+                            ->send();
                     $set('beneficiary_id', null);
                     $set('beneficiary_name', null);
+                    $set('serial_number', null);
                 }
             })
             ->required()
@@ -115,7 +127,7 @@ class MealDistributionResource extends Resource
     // ->columnSpanFull()
     // ->viewData([
     //     'status' => self::checkMealStatus(optional(auth()->user())->id)
-        
+
     // ]),
 
     Forms\Components\DateTimePicker::make('distributed_at')
@@ -143,7 +155,7 @@ class MealDistributionResource extends Resource
     // حقل مخفي لـ user_id لتعيين المستخدم الحالي (أو null إذا لم يكن موجوداً)
     Forms\Components\Hidden::make('user_id')
         ->default(fn() => auth()->id() ?? null),
-    
+
     ]);
 
     }
@@ -234,5 +246,5 @@ class MealDistributionResource extends Resource
             ->exists();
     }
 
-  
+
 }
