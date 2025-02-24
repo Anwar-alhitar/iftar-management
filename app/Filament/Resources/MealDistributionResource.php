@@ -14,7 +14,8 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\Rule;
 use App\Filament\Resources\MealDistributionResource\Pages;
-
+use Illuminate\Support\Facades\Log;
+use Filament\Notifications\Notification;
 class MealDistributionResource extends Resource
 {
     protected static ?string $model = MealDistribution::class;
@@ -24,99 +25,145 @@ class MealDistributionResource extends Resource
     public static function form(Form $form): Form
     {
         return $form
-            ->schema([
-                Forms\Components\TextInput::make('serial_search')
-                    ->label('بحث بالرقم التسلسلي (مثال: M-00001)')
-                    ->reactive()
-                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
-                        $parts = explode('-', $state);
-                        if (count($parts) === 2) {
-                            $gender = strtoupper($parts[0]) === 'M' ? 'male' : 'female';
-                            $serial = (int) $parts[1];
+           ->schema([
+    Forms\Components\TextInput::make('serial_search')
+        ->label('بحث بالرقم التسلسلي (مثال: M-00001)')
+        ->reactive()
+        ->afterStateUpdated(function ($state, callable $set, callable $get) {
+            Log::info('serial_search input:', ['serial_search' => $state]);
 
-                            $beneficiary = Beneficiary::where([
-                                'gender' => $gender,
-                                'serial_number' => $serial
-                            ])->first();
+            $parts = explode('-', $state);
+            if (count($parts) === 2) {
+                $gender = strtoupper($parts[0]) === 'M' ? 'male' : 'female';
+                $serial = (int) $parts[1];
 
-                            if ($beneficiary) {
-                                $set('beneficiary_id', $beneficiary->id);
-                                $set('beneficiary_name', $beneficiary->full_name);
-                            } else {
-                                $set('beneficiary_id', null);
-                                $set('beneficiary_name', null);
-                            }
-                        } else {
-                            $set('beneficiary_id', null);
-                            $set('beneficiary_name', null);
-                        }
+                $beneficiary = Beneficiary::where('gender', $gender)
+                    ->where('serial_number', $serial)
+                    ->first();
+
+                if ($beneficiary) {
+                    Log::info('Beneficiary found:', [
+                        'id'   => $beneficiary->id,
+                        'name' => $beneficiary->full_name
+
+                        
+                    ]);
+
+                    if (self::checkMealStatus($beneficiary->id)) {
+                        Notification::make()
+                            ->title('⚠️ تنبيه: هذا المستفيد قد استلم وجبة اليوم!')
+                            ->success()
+                            ->send();
+    
+                        // تفريغ بيانات النموذج
+                        $set('beneficiary_id', null);
+                        $set('beneficiary_name', null);
+                        $set('serial_search', null);
+                        return;
+                    }
+                    $set('beneficiary_id', $beneficiary->id);
+                    $set('beneficiary_name', $beneficiary->full_name);
+
+                    // تأكيد أن beneficiary_id تم تعيينه بشكل صحيح
+                    Log::info('Beneficiary ID set:', ['beneficiary_id' => $get('beneficiary_id')]);
+                } else {
+                    Log::warning('Beneficiary not found', [
+                        'gender' => $gender,
+                        'serial' => $serial
+                    ]);
+                    $set('beneficiary_id', null);
+                    $set('beneficiary_name', null);
+                }
+            } else {
+                Log::warning('Invalid serial_search format', ['serial_search' => $state]);
+                $set('beneficiary_id', null);
+                $set('beneficiary_name', null);
+            }
+        })
+        ->columnSpanFull()
+        ->rules([
+            'regex:/^[MF]-\d{1,5}$/'
+        ])
+        ->validationMessages([
+            'regex' => 'صيغة الرقم التسلسلي غير صحيحة (مثال: M-00001)'
+        ])
+        ->dehydrated(false), // لا يتم إرسال serial_search إلى قاعدة البيانات
+
+    Forms\Components\Grid::make()
+        ->schema([
+            Forms\Components\Select::make('beneficiary_id')
+                ->relationship(
+                    name: 'beneficiary',
+                    titleAttribute: 'full_name',
+                    modifyQueryUsing: function (Builder $query) {
+                        $userGender = optional(auth()->user())->gender ?? 'male';
+                        return $query->where('gender', $userGender);
+                    }
+                )
+                ->searchable()
+                ->required()
+                ->reactive()
+                ->afterStateUpdated(function ($state, callable $set) {
+                    $set('meal_status', self::checkMealStatus($state));
+                })
+                ->hidden(fn (callable $get) => $get('beneficiary_id'))
+                ->rules([
+                    Rule::unique('meal_distributions')->where(function ($query) {
+                        return $query->whereDate('distributed_at', now()->toDateString());
                     })
-                    ->columnSpanFull()
-                    ->rules([
-                        'regex:/^[MF]-\d{1,5}$/'
-                    ])
-                    ->validationMessages([
-                        'regex' => 'صيغة الرقم التسلسلي غير صحيحة (مثال: M-00001)'
-                    ]),
+                ])
+                ->getSearchResultsUsing(function (string $search) {
+                    return Beneficiary::where('full_name', 'like', "%{$search}%")
+                        ->orWhere('serial_number', 'like', "%{$search}%")
+                        ->limit(50)
+                        ->pluck('full_name', 'id');
+                })
+                ->getOptionLabelUsing(fn ($value): ?string => Beneficiary::find($value)?->full_name),
 
-                Forms\Components\Grid::make()
-                    ->schema([
-                        Forms\Components\Select::make('beneficiary_id')
-                            ->relationship(
-                                name: 'beneficiary',
-                                titleAttribute: 'full_name',
-                                modifyQueryUsing: function (Builder $query) {
-                                    $userGender = optional(auth()->user())->gender ?? 'male';
-                                    return $query->where('gender', $userGender);
-                                }
-                            )
-                            ->searchable()
-                            ->required()
-                            ->reactive()
-                            ->afterStateUpdated(function ($state, callable $set) {
-                                $set('meal_status', self::checkMealStatus($state));
-                            })
-                            ->hidden(fn (callable $get) => $get('beneficiary_id'))
-                            ->rules([
-                                Rule::unique('meal_distributions')->where(function ($query) {
-                                    return $query->whereDate('distributed_at', now()->toDateString());
-                                })
-                            ])
-                            ->getSearchResultsUsing(function (string $search) {
-                                return Beneficiary::where('full_name', 'like', "%{$search}%")
-                                    ->orWhere('serial_number', 'like', "%{$search}%")
-                                    ->limit(50)
-                                    ->pluck('full_name', 'id');
-                            })
-                            ->getOptionLabelUsing(fn ($value): ?string => Beneficiary::find($value)?->full_name),
+            Forms\Components\TextInput::make('beneficiary_name')
+                ->label('اسم المستفيد')
+                ->disabled()
+                ->dehydrated()
+                ->visible(fn (callable $get) => $get('beneficiary_id'))
+        ])
+        ->columns(2),
 
-                        Forms\Components\TextInput::make('beneficiary_name')
-                            ->label('اسم المستفيد')
-                            ->disabled()
-                            ->dehydrated()
-                            ->visible(fn (callable $get) => $get('beneficiary_id'))
-                    ])
-                    ->columns(2),
-                // حقل جديد للإشعار
-                Forms\Components\View::make('filament.components.meal-status-alert')
-                    ->visible(fn (callable $get) => self::checkMealStatus($get('beneficiary_id')))
-                    ->extraAttributes(['class' => 'filament-meal-alert'])
-                    ->columnSpanFull(),
+    // حقل جديد للإشعار
+    // Forms\Components\View::make('filament.components.meal-status-alert')
+    // ->extraAttributes(['class' => 'filament-meal-alert'])
+    // ->columnSpanFull()
+    // ->viewData([
+    //     'status' => self::checkMealStatus(optional(auth()->user())->id)
+        
+    // ]),
 
-                Forms\Components\DateTimePicker::make('distributed_at')
-                    ->label('تاريخ التوزيع')
-                    ->default(now())
-                    ->required()
-                    ->disabled()
-                    ->displayFormat('d/m/Y H:i'),
+    Forms\Components\DateTimePicker::make('distributed_at')
+        ->label('تاريخ التوزيع')
+        ->default(now())
+        ->required()
+        ->disabled()
+        ->dehydrated(true) // ضمان تضمين الحقل في البيانات حتى وإن كان معطلاً
+        ->displayFormat('d/m/Y H:i'),
 
-                Forms\Components\TextInput::make('hijri_date')
-                    ->label('التاريخ الهجري')
-                    ->disabled()
-                    ->default(function () {
-                        return Hijri::date(now());
-                    })
-            ]);
+    Forms\Components\TextInput::make('hijri_date')
+        ->label('التاريخ الهجري')
+        ->disabled()
+        ->default(fn() => Hijri::date(now())),
+
+    // حقل مخفي لـ beneficiary_id لضمان تمريره في الحفظ
+    Forms\Components\Hidden::make('beneficiary_id')
+        ->required()
+        ->rule('exists:beneficiaries,id')
+        ->validationMessages([
+            'required' => 'يجب تحديد مستفيد قبل الحفظ.',
+            'exists'   => 'المستفيد المحدد غير موجود في قاعدة البيانات.',
+        ]),
+
+    // حقل مخفي لـ user_id لتعيين المستخدم الحالي (أو null إذا لم يكن موجوداً)
+    Forms\Components\Hidden::make('user_id')
+        ->default(fn() => auth()->id() ?? null),
+    
+    ]);
 
     }
 
@@ -206,4 +253,5 @@ class MealDistributionResource extends Resource
             ->exists();
     }
 
+  
 }

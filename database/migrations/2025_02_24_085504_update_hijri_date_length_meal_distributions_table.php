@@ -11,10 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
+        //
         Schema::table('meal_distributions', function (Blueprint $table) {
-            //
-           // $table->foreignId('beneficiary_id')->constrained();
-
+            $table->string('hijri_date', 255)->change();
         });
     }
 
@@ -23,10 +22,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('meal_distributions', function (Blueprint $table) {
-            //
-           // $table->dropForeign(['beneficiary_id']);
-           // $table->dropColumn('beneficiary_id');
-        });
+        //
     }
 };
