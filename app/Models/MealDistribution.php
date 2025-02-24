@@ -13,7 +13,7 @@ class MealDistribution extends Model
     {
         static::creating(function ($meal) {
             // 1. التحقق من وجود beneficiary_id
-            if (empty($meal->beneficiary_id)) {
+            if (empty($meal->   )) {
                 Log::error('beneficiary_id فارغ', $meal->toArray());
                 abort(422, 'لم يتم تحديد مستفيد');
             }

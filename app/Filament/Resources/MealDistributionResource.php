@@ -151,7 +151,7 @@ class MealDistributionResource extends Resource
                 Tables\Columns\TextColumn::make('hijri_date')
                     ->label('التاريخ الهجري')
                     ->formatStateUsing(function ($state) {
-                        return Hijri::date($state)->format('d F Y');
+                        return Hijri::date($state);
                     })
                     ->sortable()
                     ->searchable(),
@@ -169,7 +169,7 @@ class MealDistributionResource extends Resource
                     ])
                     ->query(function (Builder $query, array $data) {
                         if ($data['hijri_date']) {
-                            $hijriDate = Hijri::date($data['hijri_date'])->format('Y-m-d');
+                            $hijriDate = Hijri::date($data['hijri_date']);
                             $query->where('hijri_date', $hijriDate);
                         }
                     })
@@ -205,4 +205,5 @@ class MealDistributionResource extends Resource
             })
             ->exists();
     }
+
 }
