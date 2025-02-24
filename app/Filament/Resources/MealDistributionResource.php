@@ -26,67 +26,48 @@ class MealDistributionResource extends Resource
     {
         return $form
            ->schema([
-    Forms\Components\TextInput::make('serial_search')
-        ->label('بحث بالرقم التسلسلي (مثال: M-00001)')
-        ->reactive()
-        ->afterStateUpdated(function ($state, callable $set, callable $get) {
-            Log::info('serial_search input:', ['serial_search' => $state]);
-
-            $parts = explode('-', $state);
-            if (count($parts) === 2) {
-                $gender = strtoupper($parts[0]) === 'M' ? 'male' : 'female';
-                $serial = (int) $parts[1];
-
+            Forms\Components\Radio::make('gender')
+            ->label('الجنس')
+            ->options([
+                'male' => 'ذكر',
+                'female' => 'أنثى',
+            ])
+            ->required()
+            ->reactive(),
+        
+        Forms\Components\TextInput::make('serial_number')
+            ->label('الرقم التسلسلي')
+            ->numeric()
+            ->reactive()
+            ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                $gender = $get('gender'); // الحصول على الجنس المحدد
+                if (!$gender || !$state) return;
+        
                 $beneficiary = Beneficiary::where('gender', $gender)
-                    ->where('serial_number', $serial)
+                    ->where('serial_number', $state)
                     ->first();
-
+        
                 if ($beneficiary) {
-                    Log::info('Beneficiary found:', [
-                        'id'   => $beneficiary->id,
-                        'name' => $beneficiary->full_name
-
-                        
-                    ]);
-
                     if (self::checkMealStatus($beneficiary->id)) {
                         Notification::make()
                             ->title('⚠️ تنبيه: هذا المستفيد قد استلم وجبة اليوم!')
                             ->success()
                             ->send();
-    
-                        // تفريغ بيانات النموذج
+        
                         $set('beneficiary_id', null);
                         $set('beneficiary_name', null);
-                        $set('serial_search', null);
+                        $set('serial_number', null);
                         return;
                     }
+        
                     $set('beneficiary_id', $beneficiary->id);
                     $set('beneficiary_name', $beneficiary->full_name);
-
-                    // تأكيد أن beneficiary_id تم تعيينه بشكل صحيح
-                    Log::info('Beneficiary ID set:', ['beneficiary_id' => $get('beneficiary_id')]);
                 } else {
-                    Log::warning('Beneficiary not found', [
-                        'gender' => $gender,
-                        'serial' => $serial
-                    ]);
                     $set('beneficiary_id', null);
                     $set('beneficiary_name', null);
                 }
-            } else {
-                Log::warning('Invalid serial_search format', ['serial_search' => $state]);
-                $set('beneficiary_id', null);
-                $set('beneficiary_name', null);
-            }
-        })
-        ->columnSpanFull()
-        ->rules([
-            'regex:/^[MF]-\d{1,5}$/'
-        ])
-        ->validationMessages([
-            'regex' => 'صيغة الرقم التسلسلي غير صحيحة (مثال: M-00001)'
-        ])
+            })
+            ->required()
         ->dehydrated(false), // لا يتم إرسال serial_search إلى قاعدة البيانات
 
     Forms\Components\Grid::make()
