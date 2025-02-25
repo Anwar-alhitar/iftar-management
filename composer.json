@@ -10,7 +10,6 @@
     "require": {
         "php": "^8.1",
         "alkoumi/laravel-hijri-date": "^1.0",
-        "carbondate/carbon": "*",
         "filament/filament": "^3.0",
         "filament/tables": "^3.0",
         "guzzlehttp/guzzle": "^7.2",
