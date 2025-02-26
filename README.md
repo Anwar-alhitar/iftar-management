@@ -56,8 +56,7 @@ npm run build
 cp .env.example .env
 php artisan key:generate
 
-# Database setup
-php artisan migrate --seed
+
 ```
 
 ## Configuration ⚙️
@@ -70,10 +69,26 @@ DB_DATABASE=iftar_db
 DB_USERNAME=root
 DB_PASSWORD=
 
-FILAMENT_ADMIN_EMAIL=admin@iftar.com
-FILAMENT_ADMIN_PASSWORD=Secret123!
-```
+FILAMENT_ADMIN_EMAIL=admin@example.com
+FILAMENT_ADMIN_PASSWORD=password
 
+
+```
+# Database setup
+```bash
+
+php artisan migrate --seed
+
+php artisan tinker
+User::create([
+    'name' => 'Admin',
+    'email' => 'admin@example.com',
+    'password' => bcrypt('password'),
+    'role' => 'admin',
+    'gender' => 'male'
+]);
+exit
+```
 ## Usage 🖥️
 
 ### Admin Dashboard
