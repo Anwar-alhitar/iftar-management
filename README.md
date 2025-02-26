@@ -3,6 +3,7 @@
 
 A comprehensive solution for managing and tracking meal distributions during Ramadan, built with Laravel and Filament.
 
+![1000x1000](https://github.com/user-attachments/assets/9ac446f1-55ac-471e-ad2d-1b8c49a5b40a)
 
 
 ## Table of Contents
