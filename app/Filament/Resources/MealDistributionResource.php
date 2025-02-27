@@ -14,7 +14,6 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\Rule;
 use App\Filament\Resources\MealDistributionResource\Pages;
-use Illuminate\Support\Facades\Log;
 use Filament\Notifications\Notification;
 
 class MealDistributionResource extends Resource
