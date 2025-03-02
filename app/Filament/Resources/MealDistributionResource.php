@@ -33,26 +33,17 @@ class MealDistributionResource extends Resource
     {
         return $form
            ->schema([
-            Forms\Components\Radio::make('gender')
-            ->label('الجنس')
-            ->options([
-                'male' => 'ذكر',
-                'female' => 'أنثى',
-            ])
-            ->required()
-            ->reactive(),
+
 
         Forms\Components\TextInput::make('serial_number')
             ->label('الرقم التسلسلي')
             ->numeric()
             ->reactive()
             ->afterStateUpdated(function ($state, callable $set, callable $get) {
-                $gender = $get('gender'); // الحصول على الجنس المحدد
-                if (!$gender || !$state) return;
 
-                $beneficiary = Beneficiary::where('gender', $gender)
-                    ->where('serial_number', $state)
-                    ->first();
+
+                $beneficiary = Beneficiary::where('serial_number', $state)
+                ->first();
 
                 if ($beneficiary) {
                     if (self::checkMealStatus($beneficiary->id)) {
@@ -87,11 +78,8 @@ class MealDistributionResource extends Resource
             Forms\Components\Select::make('beneficiary_id')
                 ->relationship(
                     name: 'beneficiary',
-                    titleAttribute: 'full_name',
-                    modifyQueryUsing: function (Builder $query) {
-                        $userGender = optional(auth()->user())->gender ?? 'male';
-                        return $query->where('gender', $userGender);
-                    }
+                    titleAttribute: 'full_name'
+
                 )
                 ->searchable()
                 ->required()
@@ -166,12 +154,7 @@ class MealDistributionResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('beneficiary.serial_number')
                     ->label('الرقم التسلسلي')
-                    ->formatStateUsing(function ($state, $record) {
-                        if (!optional($record->beneficiary)->exists) return 'غير معروف';
-
-                        $gender = $record->beneficiary->gender === 'male' ? 'M-' : 'F-';
-                        return $gender . str_pad($state, 5, '0', STR_PAD_LEFT);
-                    })
+                    ->formatStateUsing(fn ($state) => str_pad($state, 5, '0', STR_PAD_LEFT))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('beneficiary.full_name')
