@@ -51,8 +51,8 @@ class MealDistributionResource extends Resource
                             ->success()
                             ->send();
 
-                        $set('beneficiary_id', null);
-                        $set('beneficiary_name', null);
+                            $set('beneficiary_id', $beneficiary->id);
+                            $set('beneficiary_name', $beneficiary->full_name);
                         $set('serial_number', null);
                         return;
                     }
@@ -64,8 +64,8 @@ class MealDistributionResource extends Resource
                             ->title('⚠️ غير موجود')
                             ->success()
                             ->send();
-                    $set('beneficiary_id', null);
-                    $set('beneficiary_name', null);
+                    //$set('beneficiary_id', null);
+                  //  $set('beneficiary_name', null);
                     $set('serial_number', null);
                 }
             })
