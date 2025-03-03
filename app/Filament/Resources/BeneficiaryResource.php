@@ -13,7 +13,8 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Actions\DeleteBulkAction;
-
+use Filament\Actions\ImportAction;
+use App\Imports\BeneficiariesImport;
 class BeneficiaryResource extends Resource
 {
     protected static ?string $model = Beneficiary::class;
@@ -105,6 +106,27 @@ class BeneficiaryResource extends Resource
             ])
             ->bulkActions([
                 DeleteBulkAction::make()->icon('heroicon-s-trash'),
+            ])->headerActions([
+                ImportAction::make()
+                    ->label('استيراد مستفيدين')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->importer(BeneficiariesImport::class)
+                    ->chunkSize(100)
+                    ->form([
+                        Forms\Components\Radio::make('generate_serials')
+                            ->label('طريقة توليد الأرقام التسلسلية')
+                            ->options([
+                                true => 'توليد تلقائي',
+                                false => 'استخدام الأرقام الموجودة في الملف'
+                            ])
+                            ->required()
+                            ->default(true),
+                    ])
+                    ->mutateDataUsing(function (array $data): array {
+                        return [
+                            'generateSerials' => $data['generate_serials']
+                        ];
+                    })
             ]);
     }
 
