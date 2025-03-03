@@ -43,13 +43,7 @@ class BeneficiaryResource extends Resource
                     ->label('الرقم التسلسلي')
                     ->disabled()
                     ->visibleOn('view')
-                    ->formatStateUsing(function ($state, $record) {
-                        // التحقق من وجود السجل
-                        if (!$record) return '';
-
-                        $genderPrefix = $record->gender === 'male' ? 'M-' : 'F-';
-                        return $genderPrefix . str_pad($record->serial_number, 5, '0', STR_PAD_LEFT);
-                    }),
+                    ->formatStateUsing(fn ($state) => str_pad($state, 5, '0', STR_PAD_LEFT)),
             ]);
     }
 
