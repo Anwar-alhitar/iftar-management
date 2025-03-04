@@ -15,6 +15,7 @@ use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Actions\DeleteBulkAction;
 use Filament\Actions\ImportAction;
 use App\Imports\BeneficiariesImport;
+use Filament\Actions\Action;
 class BeneficiaryResource extends Resource
 {
     protected static ?string $model = Beneficiary::class;
@@ -126,7 +127,15 @@ class BeneficiaryResource extends Resource
                         return [
                             'generateSerials' => $data['generate_serials']
                         ];
-                    })
+                    }),
+                    Action::make('print')
+                ->label('طباعة البطاقات')
+                ->icon('heroicon-o-printer')
+                ->action(function ($livewire) {
+                    $selected = $livewire->getSelected();
+                    return redirect()->route('beneficiaries.print', ['ids' => $selected]);
+                })
+                ->requiresConfirmation()
             ]);
     }
 
