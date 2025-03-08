@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\Rule;
 use App\Filament\Resources\MealDistributionResource\Pages;
 use Filament\Notifications\Notification;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class MealDistributionResource extends Resource
 {
@@ -33,16 +34,25 @@ class MealDistributionResource extends Resource
         return $form
            ->schema([
 
-
+            Forms\Components\FileUpload::make('qr_code')
+            ->label('مسح QR Code')
+            ->reactive()
+            ->afterStateUpdated(function ($state, callable $set) {
+                if ($state) {
+                    $qrContent = QrCode::reader()->decode($state);
+                    $set('serial_number', $qrContent);
+                }
+            })
+            ->disk('local')
+            ->directory('qr-scans')
+            ->preserveFilenames()
+            ->acceptedFileTypes(['image/png', 'image/jpeg']),
         Forms\Components\TextInput::make('serial_number')
             ->label('الرقم التسلسلي')
             ->numeric()
             ->reactive()
             ->afterStateUpdated(function ($state, callable $set, callable $get) {
-
-
-                $beneficiary = Beneficiary::where('serial_number', $state)
-                ->first();
+                $beneficiary = Beneficiary::where('serial_number', $state)->first();
 
                 if ($beneficiary) {
                     if (self::checkMealStatus($beneficiary->id)) {
