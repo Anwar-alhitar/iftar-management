@@ -169,6 +169,12 @@ return [
         App\Providers\EventServiceProvider::class,
         App\Providers\Filament\AdminPanelProvider::class,
         App\Providers\RouteServiceProvider::class,
+        Filament\Actions\ActionsServiceProvider::class,
+        Filament\Forms\FormsServiceProvider::class,
+        Filament\Infolists\InfolistsServiceProvider::class,
+        Filament\Notifications\NotificationsServiceProvider::class,
+        Filament\Support\SupportServiceProvider::class,
+        Filament\Tables\TablesServiceProvider::class,
     ])->toArray(),
 
     /*
