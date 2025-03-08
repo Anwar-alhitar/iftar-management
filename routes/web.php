@@ -14,7 +14,7 @@ use App\Http\Controllers\BeneficiaryPrintController;
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('filament.admin.auth.login');
 });
 Route::get('/beneficiaries/print', [BeneficiaryPrintController::class, 'print'])
     ->name('beneficiaries.print');
